@@ -4,6 +4,7 @@ const initialStateAccount = {
   balance: 0,
   loanAmount: 0,
   loanPurpose: "",
+  isLoading: false,
 };
 
 const ACCOUNT_ACTION_TYPES = {
@@ -11,12 +12,17 @@ const ACCOUNT_ACTION_TYPES = {
   WITHDRAWAL: "account/withdrawal",
   REQUEST_LOAN: "account/requestLoan",
   PAY_LOAN: "account/payLoan",
+  IS_LOADING: "account/convertingCurrency",
 };
 
 export default function accountReducer(state = initialStateAccount, action) {
   switch (action.type) {
     case ACCOUNT_ACTION_TYPES.DEPOSIT:
-      return { ...state, balance: state.balance + action.payload };
+      return {
+        ...state,
+        balance: state.balance + action.payload,
+        isLoading: false,
+      };
     case ACCOUNT_ACTION_TYPES.WITHDRAWAL:
       return { ...state, balance: state.balance - action.payload };
     case ACCOUNT_ACTION_TYPES.REQUEST_LOAN:
@@ -34,14 +40,32 @@ export default function accountReducer(state = initialStateAccount, action) {
         loanPurpose: "",
         balance: state.balance - state.loan,
       };
+    case ACCOUNT_ACTION_TYPES.IS_LOADING:
+      return { ...state, isLoading: true };
     default:
       return state;
   }
 }
 
 // ACTION FUNCTIONS
-function deposit(amount) {
-  return { type: ACCOUNT_ACTION_TYPES.DEPOSIT, payload: amount };
+function deposit(amount, currency) {
+  if (currency === "USD")
+    return { type: ACCOUNT_ACTION_TYPES.DEPOSIT, payload: amount };
+
+  // MIDDLEWARE
+  return async function (dispatch, getState) {
+    dispatch({ type: ACCOUNT_ACTION_TYPES.IS_LOADING });
+    // API call
+    const host = "api.frankfurter.app";
+    const res = await fetch(
+      `https://${host}/latest?amount=${amount}&from=${currency}&to=USD`
+    );
+    const data = await res.json();
+    const converted = data.rates.USD;
+
+    // return action
+    dispatch({ type: ACCOUNT_ACTION_TYPES.DEPOSIT, payload: converted });
+  };
 }
 
 function withdrawal(amount) {
