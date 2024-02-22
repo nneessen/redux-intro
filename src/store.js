@@ -1,19 +1,37 @@
 /* eslint-disable no-unused-vars */
-import { createStore } from "redux";
+import { combineReducers, createStore } from "redux";
 
-const initialState = {
+const initialStateAccount = {
   balance: 0,
   loanAmount: 0,
   loanPurpose: "",
 };
 
-function reducer(state = initialState, action) {
+const initialStateCustomer = {
+  fullName: "",
+  nationalID: "",
+  createAt: "",
+};
+
+const ACCOUNT_ACTION_TYPES = {
+  DEPOSIT: "account/deposit",
+  WITHDRAWAL: "account/withdrawal",
+  REQUEST_LOAN: "account/requestLoan",
+  PAY_LOAN: "account/payLoan",
+};
+
+const CUSTOMER_ACTION_TYPES = {
+  CREATE_CUSTOMER: "customer/createCustomer",
+  UPDATE_CUSTOMER_NAME: "customer/updateCustomer",
+};
+
+function accountReducer(state = initialStateAccount, action) {
   switch (action.type) {
-    case "account/deposit":
+    case ACCOUNT_ACTION_TYPES.DEPOSIT:
       return { ...state, balance: state.balance + action.payload };
-    case "account/withdrawal":
+    case ACCOUNT_ACTION_TYPES.WITHDRAWAL:
       return { ...state, balance: state.balance - action.payload };
-    case "account/requestLoan":
+    case ACCOUNT_ACTION_TYPES.REQUEST_LOAN:
       if (state.loan > 0) return state;
       return {
         ...state,
@@ -21,7 +39,7 @@ function reducer(state = initialState, action) {
         loanPurpose: action.payload.purpose,
         balance: state.balance + action.payload.amount,
       };
-    case "account/payLoan":
+    case ACCOUNT_ACTION_TYPES.PAY_LOAN:
       return {
         ...state,
         loan: 0,
@@ -33,35 +51,69 @@ function reducer(state = initialState, action) {
   }
 }
 
-const store = createStore(reducer);
+function customerReducer(state = initialStateCustomer, action) {
+  switch (action.type) {
+    case CUSTOMER_ACTION_TYPES.CREATE_CUSTOMER:
+      return {
+        ...state,
+        fullName: action.payload.fullName,
+        nationalID: action.payload.nationalID,
+        createdAt: action.payload.createdAt,
+      };
+    case CUSTOMER_ACTION_TYPES.UPDATE_CUSTOMER_NAME:
+      return {
+        ...state,
+        fullName: action.payload,
+      };
+    default:
+      return state;
+  }
+}
 
-const ACTION_TYPES = {
-  DEPOSIT: "account/deposit",
-  WITHDRAWAL: "account/withdrawal",
-  REQUEST_LOAN: "account/requestLoan",
-  PAY_LOAN: "account/payLoan",
-};
+// ROOT REDUCER
+const rootReducer = combineReducers({
+  account: accountReducer,
+  customer: customerReducer,
+});
 
+const store = createStore(rootReducer);
+
+// ACTION FUNCTIONS
 function deposit(amount) {
-  return { type: ACTION_TYPES.DEPOSIT, payload: amount };
+  return { type: ACCOUNT_ACTION_TYPES.DEPOSIT, payload: amount };
 }
 
 function withdrawal(amount) {
-  return { type: ACTION_TYPES.WITHDRAWAL, payload: amount };
+  return { type: ACCOUNT_ACTION_TYPES.WITHDRAWAL, payload: amount };
 }
 
 function requestLoan(amount, purpose) {
   return {
-    type: ACTION_TYPES.REQUEST_LOAN,
+    type: ACCOUNT_ACTION_TYPES.REQUEST_LOAN,
     payload: { amount, purpose },
   };
 }
 
 function payLoan() {
-  return { type: ACTION_TYPES.PAY_LOAN };
+  return { type: ACCOUNT_ACTION_TYPES.PAY_LOAN };
 }
 
-store.dispatch(deposit(12345));
-store.dispatch(withdrawal(12345));
-store.dispatch(requestLoan(10000, "Buy supplies for my business"));
-store.dispatch(payLoan());
+function createCustomer(fullName, nationalID) {
+  return {
+    type: CUSTOMER_ACTION_TYPES.CREATE_CUSTOMER,
+    payload: { fullName, nationalID, createdAt: new Date().toISOString() },
+  };
+}
+
+function updateName(fullName) {
+  return {
+    type: CUSTOMER_ACTION_TYPES.UPDATE_CUSTOMER_NAME,
+    payload: fullName,
+  };
+}
+
+store.dispatch(createCustomer("Nick Neessen", "32513215"));
+console.log(store.getState());
+
+store.dispatch(requestLoan(1000000));
+console.log(store.getState());
